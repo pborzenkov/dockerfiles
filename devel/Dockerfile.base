@@ -1,0 +1,29 @@
+FROM archlinux/base:latest
+
+LABEL maintainer="Pavel Borzenkov <pavel.borzenkov@gmail.com>"
+
+RUN useradd -m -s /bin/zsh pbor \
+	&& gpasswd -a pbor wheel \
+	&& pacman -Suy --noconfirm sudo zsh tar \
+	&& sed -i 's/^#\s*\(%wheel\s*ALL=(ALL)\s*NOPASSWD:\s*ALL\)/\1/' /etc/sudoers \
+	&& curl -L https://github.com/Jguer/yay/releases/download/v9.2.1/yay_9.2.1_x86_64.tar.gz | tar xvzf - -O yay_9.2.1_x86_64/yay > /tmp/yay \
+	&& chmod +x /tmp/yay
+
+USER pbor
+
+RUN sudo pacman -S --noconfirm \
+		grep file awk fakeroot man neovim git make gcc clang go ripgrep fd fzf \
+	&& /tmp/yay -Suy --noconfirm yay bear direnv \
+	&& sudo rm /tmp/yay \
+	&& sudo pacman -Scc \
+	&& mkdir -p /home/pbor/src/github.com/pborzenkov \
+	&& git clone --depth 1 https://github.com/pborzenkov/dotfiles /home/pbor/src/github.com/pborzenkov/dotfiles \
+	&& make -C /home/pbor/src/github.com/pborzenkov/dotfiles \
+	&& nvim --headless +PlugInstall +qa \
+	&& GO111MODULE=on go get golang.org/x/tools/gopls@latest
+
+WORKDIR /home/pbor
+
+ENTRYPOINT /bin/zsh
+
+# vim:syntax=dockerfile:
